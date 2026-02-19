@@ -1,0 +1,27 @@
+name: ETF Intel System
+
+on:
+  schedule:
+    - cron: '0 10 * * 1-5'   # 北京时间18:00
+  workflow_dispatch:
+
+jobs:
+  run-etf:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run system
+        run: python main.py
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}

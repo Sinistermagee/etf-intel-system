@@ -1,18 +1,15 @@
-import os
 import requests
+import os
 
 FEISHU_WEBHOOK = os.getenv("FEISHU_WEBHOOK_URL")
 
 def send_feishu_message(text):
-    if not FEISHU_WEBHOOK:
-        print("未配置飞书Webhook")
-        return
-
     data = {
         "msg_type": "text",
         "content": {
-            "text": text
+            "text": f"ETF 智能策略日报\n\n{text}"
         }
     }
 
-    requests.post(FEISHU_WEBHOOK, json=data)
+    response = requests.post(FEISHU_WEBHOOK, json=data)
+    print("Feishu response:", response.text)

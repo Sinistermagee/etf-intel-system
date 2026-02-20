@@ -1,64 +1,36 @@
-from modules.data_fetch import get_etf_data
+def calculate_score(df):
+    """
+    输入: 单个ETF的历史数据df
+    输出: dict，包含 total_score
+    """
 
+    if df is None or len(df) < 60:
+        return {"total_score": 0}
 
-ETF_POOL = ["510300", "510500", "159915", "512480"]
+    close = df["close"]
 
+    # ===== 1️⃣ 10日动量 =====
+    ret_10 = (close.iloc[-1] - close.iloc[-11]) / close.iloc[-11]
+    score_10 = max(0, ret_10 * 800)
+    score_10 = min(score_10, 40)
 
-def calculate_all_scores():
+    # ===== 2️⃣ 20日动量 =====
+    ret_20 = (close.iloc[-1] - close.iloc[-21]) / close.iloc[-21]
+    score_20 = max(0, ret_20 * 600)
+    score_20 = min(score_20, 30)
 
-    data = {}
+    # ===== 3️⃣ 趋势判断 =====
+    ma20 = close.rolling(20).mean().iloc[-1]
+    ma60 = close.rolling(60).mean().iloc[-1]
+    score_trend = 10 if ma20 > ma60 else 0
 
-    # ===== 1️⃣ 计算所有ETF的基础数据 =====
-    for code in ETF_POOL:
-        df = get_etf_data(code)
-        if df is None or len(df) < 60:
-            continue
+    # ===== 4️⃣ 风险惩罚（短期大跌过滤） =====
+    risk_penalty = 20 if ret_10 < -0.05 else 0
 
-        close = df["close"]
+    # ===== 5️⃣ 总分 =====
+    total_score = score_10 + score_20 + score_trend - risk_penalty
+    total_score = max(0, round(total_score, 2))
 
-        ret_10 = (close.iloc[-1] - close.iloc[-11]) / close.iloc[-11]
-        ret_20 = (close.iloc[-1] - close.iloc[-21]) / close.iloc[-21]
-
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma60 = close.rolling(60).mean().iloc[-1]
-
-        data[code] = {
-            "ret_10": ret_10,
-            "ret_20": ret_20,
-            "trend": ma20 > ma60
-        }
-
-    # ===== 2️⃣ 计算相对强度排名 =====
-    ranked = sorted(data.items(), key=lambda x: x[1]["ret_10"], reverse=True)
-
-    rank_score = {}
-    for i, (code, _) in enumerate(ranked):
-        if i == 0:
-            rank_score[code] = 20
-        elif i == 1:
-            rank_score[code] = 10
-        else:
-            rank_score[code] = 0
-
-    # ===== 3️⃣ 计算总分 =====
-    results = {}
-
-    for code, values in data.items():
-
-        # 连续动量评分
-        score_10 = max(0, values["ret_10"] * 800)
-        score_10 = min(score_10, 40)
-
-        score_20 = max(0, values["ret_20"] * 600)
-        score_20 = min(score_20, 30)
-
-        # 趋势过滤
-        score_trend = 10 if values["trend"] else 0
-
-        total_score = score_10 + score_20 + score_trend + rank_score.get(code, 0)
-
-        results[code] = {
-            "total_score": round(total_score, 2)
-        }
-
-    return results
+    return {
+        "total_score": total_score
+    }

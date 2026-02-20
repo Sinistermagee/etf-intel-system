@@ -5,7 +5,9 @@ def calculate_score(code):
 
     df = get_etf_data(code)
     if df is None or len(df) < 60:
-        return 0
+        return {
+            "total_score": 0
+        }
 
     close = df["close"]
 
@@ -28,4 +30,6 @@ def calculate_score(code):
     if ma20 > ma60:
         score += 30
 
-    return score
+    return {
+        "total_score": score
+    }
